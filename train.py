@@ -66,7 +66,7 @@ def train_single_epoch(args, epoch, encoder, decoder, loader, optimizer, alpha_t
 
 def train(args, encoder, decoder):
     MAX_EPOCH = args.max_epoch
-    content_root = args.training_dataset
+    content_root = args.train_data
 
     for param in encoder.parameters():
         param.requires_grad = False
