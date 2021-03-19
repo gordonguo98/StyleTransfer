@@ -1,5 +1,6 @@
 import argparse
 import os
+import datetime
 
 import torch
 import torch.nn as nn
@@ -57,7 +58,7 @@ def train_single_epoch(args, epoch, encoder, decoder, loader, optimizer, alpha_t
             content_batch = content_batch.cuda()
         loss = get_loss(encoder, decoder, content_batch, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         if i % 100 == 0:
-            print('epoch: %d | batch: %d | loss: %.4f' % (epoch, i, loss.cpu().data))
+            print('%s epoch: %d | batch: %d | loss: %.4f' % (datetime.datetime.now(), epoch, i, loss.cpu().data))
 
         optimizer.zero_grad()
         loss.backward(retain_graph=False)
