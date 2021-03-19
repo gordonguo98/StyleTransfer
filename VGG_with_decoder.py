@@ -6,102 +6,131 @@ class Encoder(nn.Module):
     def __init__(self, vgg):
         super(Encoder, self).__init__()
         # vgg
+        '''
+        odict_keys(['0.weight', '0.bias', '2.weight', '2.bias', '5.weight', '5.bias', '9.weight', '9.bias',
+         '12.weight', '12.bias', '16.weight', '16.bias', '19.weight', '19.bias', '22.weight', '22.bias', 
+         '25.weight', '25.bias', '29.weight', '29.bias', '32.weight', '32.bias', '35.weight', '35.bias', 
+         '38.weight', '38.bias', '42.weight', '42.bias'])
+        '''
+        # 224 x 224
+        self.conv1 = nn.Conv2d(3, 3, 1, 1, 0)
+        self.conv1.weight = torch.nn.Parameter(vgg['0.weight'].float())
+        self.conv1.bias = torch.nn.Parameter(vgg['0.bias'].float())
         self.reflecPad1 = nn.ReflectionPad2d((1, 1, 1, 1))
+        # 226 x 226
 
         self.conv2 = nn.Conv2d(3, 64, 3, 1, 0)
-        self.conv2.weight = torch.nn.Parameter(vgg[0].weight.float())
-        self.conv2.bias = torch.nn.Parameter(vgg[0].bias.float())
+        self.conv2.weight = torch.nn.Parameter(vgg['2.weight'].float())
+        self.conv2.bias = torch.nn.Parameter(vgg['2.bias'].float())
         self.relu2 = nn.ReLU(inplace=True)
+        # 224 x 224
 
         self.reflecPad3 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv3 = nn.Conv2d(64, 64, 3, 1, 0)
-        self.conv3.weight = torch.nn.Parameter(vgg[2].weight.float())
-        self.conv3.bias = torch.nn.Parameter(vgg[2].bias.float())
+        self.conv3.weight = torch.nn.Parameter(vgg['5.weight'].float())
+        self.conv3.bias = torch.nn.Parameter(vgg['5.bias'].float())
         self.relu3 = nn.ReLU(inplace=True)
+        # 224 x 224
 
         self.maxPool = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        # 112 x 112
 
         self.reflecPad4 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv4 = nn.Conv2d(64, 128, 3, 1, 0)
-        self.conv4.weight = torch.nn.Parameter(vgg[5].weight.float())
-        self.conv4.bias = torch.nn.Parameter(vgg[5].bias.float())
+        self.conv4.weight = torch.nn.Parameter(vgg['9.weight'].float())
+        self.conv4.bias = torch.nn.Parameter(vgg['9.bias'].float())
         self.relu4 = nn.ReLU(inplace=True)
+        # 112 x 112
 
         self.reflecPad5 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv5 = nn.Conv2d(128, 128, 3, 1, 0)
-        self.conv5.weight = torch.nn.Parameter(vgg[7].weight.float())
-        self.conv5.bias = torch.nn.Parameter(vgg[7].bias.float())
+        self.conv5.weight = torch.nn.Parameter(vgg['12.weight'].float())
+        self.conv5.bias = torch.nn.Parameter(vgg['12.bias'].float())
         self.relu5 = nn.ReLU(inplace=True)
+        # 112 x 112
 
         self.maxPool2 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        # 56 x 56
 
         self.reflecPad6 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv6 = nn.Conv2d(128, 256, 3, 1, 0)
-        self.conv6.weight = torch.nn.Parameter(vgg[10].weight.float())
-        self.conv6.bias = torch.nn.Parameter(vgg[10].bias.float())
+        self.conv6.weight = torch.nn.Parameter(vgg['16.weight'].float())
+        self.conv6.bias = torch.nn.Parameter(vgg['16.bias'].float())
         self.relu6 = nn.ReLU(inplace=True)
+        # 56 x 56
 
         self.reflecPad7 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv7 = nn.Conv2d(256, 256, 3, 1, 0)
-        self.conv7.weight = torch.nn.Parameter(vgg[12].weight.float())
-        self.conv7.bias = torch.nn.Parameter(vgg[12].bias.float())
+        self.conv7.weight = torch.nn.Parameter(vgg['19.weight'].float())
+        self.conv7.bias = torch.nn.Parameter(vgg['19.bias'].float())
         self.relu7 = nn.ReLU(inplace=True)
+        # 56 x 56
 
         self.reflecPad8 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv8 = nn.Conv2d(256, 256, 3, 1, 0)
-        self.conv8.weight = torch.nn.Parameter(vgg[14].weight.float())
-        self.conv8.bias = torch.nn.Parameter(vgg[14].bias.float())
+        self.conv8.weight = torch.nn.Parameter(vgg['22.weight'].float())
+        self.conv8.bias = torch.nn.Parameter(vgg['22.bias'].float())
         self.relu8 = nn.ReLU(inplace=True)
+        # 56 x 56
 
         self.reflecPad9 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv9 = nn.Conv2d(256, 256, 3, 1, 0)
-        self.conv9.weight = torch.nn.Parameter(vgg[16].weight.float())
-        self.conv9.bias = torch.nn.Parameter(vgg[16].bias.float())
+        self.conv9.weight = torch.nn.Parameter(vgg['25.weight'].float())
+        self.conv9.bias = torch.nn.Parameter(vgg['25.bias'].float())
         self.relu9 = nn.ReLU(inplace=True)
+        # 56 x 56
 
         self.maxPool3 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        # 28 x 28
 
         self.reflecPad10 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv10 = nn.Conv2d(256, 512, 3, 1, 0)
-        self.conv10.weight = torch.nn.Parameter(vgg[19].weight.float())
-        self.conv10.bias = torch.nn.Parameter(vgg[19].bias.float())
+        self.conv10.weight = torch.nn.Parameter(vgg['29.weight'].float())
+        self.conv10.bias = torch.nn.Parameter(vgg['29.bias'].float())
         self.relu10 = nn.ReLU(inplace=True)
+        # 28 x 28
 
         self.reflecPad11 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv11 = nn.Conv2d(512, 512, 3, 1, 0)
-        self.conv11.weight = torch.nn.Parameter(vgg[21].weight.float())
-        self.conv11.bias = torch.nn.Parameter(vgg[21].bias.float())
+        self.conv11.weight = torch.nn.Parameter(vgg['32.weight'].float())
+        self.conv11.bias = torch.nn.Parameter(vgg['32.bias'].float())
         self.relu11 = nn.ReLU(inplace=True)
+        # 28 x 28
 
         self.reflecPad12 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv12 = nn.Conv2d(512, 512, 3, 1, 0)
-        self.conv12.weight = torch.nn.Parameter(vgg[23].weight.float())
-        self.conv12.bias = torch.nn.Parameter(vgg[23].bias.float())
+        self.conv12.weight = torch.nn.Parameter(vgg['35.weight'].float())
+        self.conv12.bias = torch.nn.Parameter(vgg['35.bias'].float())
         self.relu12 = nn.ReLU(inplace=True)
+        # 28 x 28
 
         self.reflecPad13 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv13 = nn.Conv2d(512, 512, 3, 1, 0)
-        self.conv13.weight = torch.nn.Parameter(vgg[25].weight.float())
-        self.conv13.bias = torch.nn.Parameter(vgg[25].bias.float())
+        self.conv13.weight = torch.nn.Parameter(vgg['38.weight'].float())
+        self.conv13.bias = torch.nn.Parameter(vgg['38.bias'].float())
         self.relu13 = nn.ReLU(inplace=True)
+        # 28 x 28
 
         self.maxPool4 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
+        # 14 x 14
 
         self.reflecPad14 = nn.ReflectionPad2d((1, 1, 1, 1))
         self.conv14 = nn.Conv2d(512, 512, 3, 1, 0)
-        self.conv14.weight = torch.nn.Parameter(vgg[28].weight.float())
-        self.conv14.bias = torch.nn.Parameter(vgg[28].bias.float())
+        self.conv14.weight = torch.nn.Parameter(vgg['42.weight'].float())
+        self.conv14.bias = torch.nn.Parameter(vgg['42.bias'].float())
         self.relu14 = nn.ReLU(inplace=True)
+        # 14 x 14
 
-    def forward(self, x):
-        out = self.reflecPad1(x)
+    def forward(self,x):
+        out = self.conv1(x)
+        out = self.reflecPad1(out)
         out = self.conv2(out)
         out = self.relu2(out)
         out1 = out
         out = self.reflecPad3(out)
         out = self.conv3(out)
         out = self.relu3(out)
-        out, pool_idx = self.maxPool(out)
+        out,pool_idx = self.maxPool(out)
         out = self.reflecPad4(out)
         out = self.conv4(out)
         out = self.relu4(out)
@@ -109,7 +138,7 @@ class Encoder(nn.Module):
         out = self.reflecPad5(out)
         out = self.conv5(out)
         out = self.relu5(out)
-        out, pool_idx2 = self.maxPool2(out)
+        out,pool_idx2 = self.maxPool2(out)
         out = self.reflecPad6(out)
         out = self.conv6(out)
         out = self.relu6(out)
@@ -123,7 +152,7 @@ class Encoder(nn.Module):
         out = self.reflecPad9(out)
         out = self.conv9(out)
         out = self.relu9(out)
-        out, pool_idx3 = self.maxPool3(out)
+        out,pool_idx3 = self.maxPool3(out)
         out = self.reflecPad10(out)
         out = self.conv10(out)
         out = self.relu10(out)
@@ -137,7 +166,7 @@ class Encoder(nn.Module):
         out = self.reflecPad13(out)
         out = self.conv13(out)
         out = self.relu13(out)
-        out, pool_idx4 = self.maxPool4(out)
+        out,pool_idx4 = self.maxPool4(out)
         out = self.reflecPad14(out)
         out = self.conv14(out)
         out = self.relu14(out)

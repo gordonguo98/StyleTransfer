@@ -5,23 +5,16 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
-from torchvision import models
 
 from dataset import TransferDataset
 from VGG_with_decoder import Encoder, Decoder
 
 
 def load_nets():
-    vgg = models.vgg19(pretrained=True)
-    net_e = Encoder(vgg.features)
+    vgg = torch.load('./vgg_normalised_conv5_1.pth')
+    net_e = Encoder(vgg)
     net_d = Decoder()
     return net_e, net_d
-
-
-def get_dataloader(content_root):
-    transferset = TransferDataset(content_root)
-    loader = DataLoader(transferset, 8, True, num_workers=8, drop_last=True)
-    return loader
 
 
 def get_loss(encoder, decoder, content, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control):
@@ -36,6 +29,11 @@ def get_loss(encoder, decoder, content, d0_control, d1_control, d2_control, d3_c
     loss_p = sum(loss_p_list) / len(loss_p_list)
     loss = 0.5 * loss_r + 0.5 * loss_p
     return loss
+
+
+def adjust_learning_rate(optimizer, epoch):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = param_group['lr'] * (0.95 ** epoch)
 
 
 def train_single_epoch(args, epoch, encoder, decoder, loader, optimizer, alpha_train=0):
@@ -74,24 +72,31 @@ def train(args, encoder, decoder):
         param.requires_grad = False
 
     decoder.train(), encoder.eval()
-    loader = get_dataloader(content_root)
-    optimizer = optim.Adam(decoder.parameters(), lr=1e-4, betas=(0.5, 0.9))
+    loader = DataLoader(TransferDataset(content_root), args.batch_size, True, num_workers=args.num_workers, drop_last=True)
+    optimizer = optim.Adam(decoder.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
 
     for i in range(MAX_EPOCH):
         train_single_epoch(args, i, encoder, decoder, loader, optimizer)
         state_dict = decoder.state_dict()
         for key in state_dict.keys():
             state_dict[key] = state_dict[key].cpu()
-        torch.save(state_dict, '{:s}/decoder_epoch_{:d}.pth.tar'.format(args.save_dir, i + 1))
+        torch.save(state_dict, '{:s}/decoder_epoch_{:d}.pth'.format(args.save_dir, i + 1))
+        adjust_learning_rate(optimizer, i)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-g', '--gpu', default=0)
     parser.add_argument('-s', '--save_dir', default='trained_models')
+    # 01010000000100000000000000001111
     parser.add_argument('-d', '--d_control', default='01010000000100000000000000001111')
-    parser.add_argument('-me', '--max_epoch', default=2, type=int)
+    parser.add_argument('-me', '--max_epoch', default=5, type=int)
     parser.add_argument('-t', '--train_data')
+    parser.add_argument('--batch_size', default=8, type=int)
+    parser.add_argument('--num_workers', default=8, type=int)
+    parser.add_argument('--lr', default=1e-4, type=float)
+    parser.add_argument('--beta1', default=0.9, type=float)
+    parser.add_argument('--beta2', default=0.99, type=float)
     args = parser.parse_args()
 
     if not os.path.isdir(args.save_dir):
