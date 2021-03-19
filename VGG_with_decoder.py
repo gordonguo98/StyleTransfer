@@ -1089,9 +1089,10 @@ class Decoder2(nn.Module):
             out = self.relu20(out)
         return out
 
-class decoder3(nn.Module):
+
+class Decoder3(nn.Module):
     def __init__(self,d=None):
-        super(decoder3,self).__init__()
+        super(Decoder3,self).__init__()
         self.maxPool_mid1 = nn.MaxPool2d(kernel_size=2, stride=2, return_indices=True)
         self.maxPool_mid2 = nn.MaxPool2d(kernel_size=4, stride=4, return_indices=True)
         self.maxPool_mid3 = nn.MaxPool2d(kernel_size=8, stride=8, return_indices=True)
