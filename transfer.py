@@ -34,12 +34,6 @@ def load_net(args):
     return net_e, net_d0, net_d1, net_d2, net_d3, net_d4, net_d5
 
 
-def get_test_list(root_dir):
-    test_list = os.listdir(root_dir)
-    test_list = [os.path.join(root_dir, i) for i in test_list]
-    return test_list
-
-
 def get_a_image(path):
     img = cv2.imread(path, cv2.IMREAD_COLOR)
     return img
@@ -125,16 +119,16 @@ if __name__ == '__main__':
         net_d4.cuda(), net_d4.eval()
         net_d5.cuda(), net_d5.eval()
 
-    content_list = get_test_list(args.content)
-    style_list = get_test_list(args.style)
+    content_list = os.listdir(args.content)
+    style_list = os.listdir(args.style)
     content_list = [i for i in content_list if '.jpg' in i]
     style_list = [i for i in style_list if '.jpg' in i]
-    content_list.sort()
-    style_list.sort()
-    for k in range(len(style_list[:])):
-        content_path = content_list[k]
-        style_path = style_list[k]
-        print('----- transfering pair %d -------' % (k))
+    img_pairs = set(content_list) & set(style_list)
+
+    for img_pair in img_pairs:
+        content_path = os.path.join(args.content, img_pair)
+        style_path = os.path.join(args.style, img_pair)
+        print('----- transferring image %s -------' % (img_pair))
         content = get_a_image(content_path)
         style = get_a_image(style_path)
         content_save = content
@@ -207,9 +201,9 @@ if __name__ == '__main__':
         csF[0] = net_d5(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d5(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         out = csF[0].cpu().data.float()
-        utils.save_image(out, os.path.join(args.save_dir, '%d.jpg' % (k)))
-        out = cv2.imread(os.path.join(args.save_dir, '%d.jpg' % (k)))
+        utils.save_image(out, os.path.join(args.save_dir, '%s.jpg' % (img_pair)))
+        out = cv2.imread(os.path.join(args.save_dir, '%s.jpg' % (img_pair)))
         out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
         # content_save, style_save, out = resize_save(content_save, style_save, out)
         # out_compare = np.concatenate((content_save, style_save, out), 1)
-        cv2.imwrite(os.path.join(args.save_dir, '%d.jpg' % (k)), out)
+        cv2.imwrite(os.path.join(args.save_dir, '%s.jpg' % (img_pair)), out)
