@@ -55,31 +55,9 @@ def resize_save(content, style, out):
 def resize_imgs(content, style):
     c_h = 512
     c_w = 768
-    s_h = 512
-    s_w = 768
-    # c_h = content.shape[0]
-    # c_w = content.shape[1]
-    # s_h = style.shape[0]
-    # s_w = style.shape[1]
-    # c_ratio = np.float32(c_h) / c_w
-    # s_ratio = np.float32(s_h) / s_w
-    # if (c_ratio / s_ratio > 4.0) or (s_ratio / c_ratio > 4.0):
-        # c_h_out = 512
-        # c_w_out = 512
-        # s_h_out = 512
-        # s_w_out = 512
-    # elif c_ratio < 1:
-        # c_h = 512
-        # c_w = np.int32(c_h / c_ratio)
-        # s_h = c_h
-        # s_w = c_w
-    # elif c_ratio >= 1:
-        # c_w = 512
-        # c_h = np.int32(c_w * c_ratio)
-        # s_h = c_h
-        # s_w = c_w
+
     content = cv2.resize(content, (c_w, c_h), cv2.INTER_AREA)
-    style = cv2.resize(style, (s_w, s_h), cv2.INTER_AREA)
+    style = cv2.resize(style, (content.shape[1], content.shape[0]), cv2.INTER_AREA)
     return content, style
 
 
@@ -201,9 +179,10 @@ if __name__ == '__main__':
         csF[0] = net_d5(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d5(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         out = csF[0].cpu().data.float()
-        utils.save_image(out, os.path.join(args.save_dir, '%s.jpg' % (img_pair)))
-        out = cv2.imread(os.path.join(args.save_dir, '%s.jpg' % (img_pair)))
+        utils.save_image(out, os.path.join(args.save_dir, img_pair))
+        out = cv2.imread(os.path.join(args.save_dir, img_pair))
         out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
-        # content_save, style_save, out = resize_save(content_save, style_save, out)
-        # out_compare = np.concatenate((content_save, style_save, out), 1)
-        cv2.imwrite(os.path.join(args.save_dir, '%s.jpg' % (img_pair)), out)
+        content_save, style_save, out = resize_save(content_save, style_save, out)
+        out_compare = np.concatenate((content_save, style_save, out), 1)
+        cv2.imwrite(os.path.join(args.save_dir, img_pair), out)
+        cv2.imwrite(os.path.join(args.save_dir, 'compare_' + img_pair), out_compare)

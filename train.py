@@ -34,7 +34,7 @@ def get_loss(encoder, decoder, content, d0_control, d1_control, d2_control, d3_c
 
 def adjust_learning_rate(optimizer, epoch):
     for param_group in optimizer.param_groups:
-        param_group['lr'] = param_group['lr'] * (0.95 ** epoch)
+        param_group['lr'] = param_group['lr'] * (0.5 ** epoch)
 
 
 def train_single_epoch(args, epoch, encoder, decoder, loader, optimizer, alpha_train=0):
@@ -82,7 +82,7 @@ def train(args, encoder, decoder):
         for key in state_dict.keys():
             state_dict[key] = state_dict[key].cpu()
         torch.save(state_dict, '{:s}/decoder_epoch_{:d}.pth'.format(args.save_dir, i + 1))
-        adjust_learning_rate(optimizer, i)
+        adjust_learning_rate(optimizer, i + 1)
 
 
 if __name__ == '__main__':

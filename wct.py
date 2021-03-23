@@ -55,6 +55,7 @@ def transform(cF, sF, alpha):
 
     targetFeature = whiten_and_color(cFView,sFView)
     targetFeature = targetFeature.view_as(cF)
+    alpha = int(alpha)
     csF = alpha * targetFeature + (1.0 - alpha) * cF
     csF = csF.float().unsqueeze(0)
     return csF
