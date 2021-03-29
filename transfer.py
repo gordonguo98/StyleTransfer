@@ -5,6 +5,9 @@ import numpy as np
 
 import cv2
 import torch
+import pixellib
+from pixellib.semantic import semantic_segmentation, create_ade20k_label_colormap
+from PIL import Image
 
 import argparse
 from torchvision import utils
@@ -61,6 +64,81 @@ def resize_imgs(content, style):
     return content, style
 
 
+def change_seg(seg):
+    '''
+    color_dict = {
+        (0, 0, 255): 3,  # blue
+        (0, 255, 0): 2,  # green
+        (0, 0, 0): 0,  # black
+        (255, 255, 255): 1,  # white
+        (255, 0, 0): 4,  # red
+        (255, 255, 0): 5,  # yellow
+        (128, 128, 128): 6,  # grey
+        (0, 255, 255): 7,  # lightblue
+        (255, 0, 255): 8  # purple
+    }
+    :param seg:
+    :return:
+    '''
+    colormap = create_ade20k_label_colormap()
+    color_dict = {tuple(color): i for i, color in enumerate(colormap)}
+    arr_seg = np.asarray(seg)
+    new_seg = np.zeros(arr_seg.shape[:-1])
+    for x in range(arr_seg.shape[0]):
+        for y in range(arr_seg.shape[1]):
+            if tuple(arr_seg[x, y, :]) in color_dict:
+                new_seg[x, y] = color_dict[tuple(arr_seg[x, y, :])]
+            else:
+                min_dist_index = 0
+                min_dist = 99999
+                for key in color_dict:
+                    dist = np.sum(np.abs(np.asarray(key) - arr_seg[x, y, :]))
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_dist_index = color_dict[key]
+                    elif dist == min_dist:
+                        try:
+                            min_dist_index = new_seg[x, y-1, :]
+                        except Exception:
+                            pass
+                new_seg[x, y] = min_dist_index
+    return new_seg.astype(np.uint8)
+
+
+def load_segment(image_path, image_size=None):
+    if not image_path:
+        return np.asarray([])
+    image = Image.open(image_path)
+    if image_size is not None:
+        transform = transforms.Resize(image_size, interpolation=Image.NEAREST)
+        image = transform(image)
+    w, h = image.size
+    transform = transforms.CenterCrop((h // 16 * 16, w // 16 * 16))
+    image = transform(image)
+    if len(np.asarray(image).shape) == 3:
+        image = change_seg(image)
+    return np.asarray(image)
+
+
+def compute_label_info(content_segment, style_segment):
+    if not content_segment.size or not style_segment.size:
+        return None, None
+    max_label = np.max(content_segment) + 1
+    label_set = np.unique(content_segment)
+    label_indicator = np.zeros(max_label)
+    for l in label_set:
+        content_mask = np.where(content_segment.reshape(content_segment.shape[0] * content_segment.shape[1]) == l)
+        style_mask = np.where(style_segment.reshape(style_segment.shape[0] * style_segment.shape[1]) == l)
+
+        c_size = content_mask[0].size
+        s_size = style_mask[0].size
+        if c_size > 10 and s_size > 10 and c_size / s_size < 100 and s_size / c_size < 100:
+            label_indicator[l] = True
+        else:
+            label_indicator[l] = False
+    return label_set, label_indicator
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-g', '--gpu', default=1)
@@ -103,6 +181,9 @@ if __name__ == '__main__':
     style_list = [i for i in style_list if '.jpg' in i]
     img_pairs = set(content_list) & set(style_list)
 
+    segment_image = semantic_segmentation()
+    segment_image.load_ade20k_model("deeplabv3_xception65_ade20k.h5")
+
     for img_pair in img_pairs:
         content_path = os.path.join(args.content, img_pair)
         style_path = os.path.join(args.style, img_pair)
@@ -122,34 +203,37 @@ if __name__ == '__main__':
         cF = list(net_e(content))
         sF = list(net_e(style))
         csF = []
+        _, cS = segment_image.segmentAsAde20k(content_path)
+        _, sS = segment_image.segmentAsAde20k(style_path)
+        label_set, label_indicator = compute_label_info(cS, sS)
         for ii in range(len(cF)):
             if ii == 0:
                 if d0_control[0] == 1:
-                    this_csF = transform(cF[ii], sF[ii], args.alpha)
+                    this_csF = transform(cF[ii], sF[ii], cS, sS, label_set, label_indicator, args.alpha)
                     csF.append(this_csF)
                 else:
                     csF.append(cF[ii])
             elif ii == 1:
                 if d2_control[-1] == 1:
-                    this_csF = transform(cF[ii], sF[ii], args.alpha)
+                    this_csF = transform(cF[ii], sF[ii], cS, sS, label_set, label_indicator, args.alpha)
                     csF.append(this_csF)
                 else:
                     csF.append(cF[ii])
             elif ii == 2:
                 if d3_control[-1] == 1:
-                    this_csF = transform(cF[ii], sF[ii], args.alpha)
+                    this_csF = transform(cF[ii], sF[ii], cS, sS, label_set, label_indicator, args.alpha)
                     csF.append(this_csF)
                 else:
                     csF.append(cF[ii])
             elif ii == 3:
                 if d4_control[-1] == 1:
-                    this_csF = transform(cF[ii], sF[ii], args.alpha)
+                    this_csF = transform(cF[ii], sF[ii], cS, sS, label_set, label_indicator, args.alpha)
                     csF.append(this_csF)
                 else:
                     csF.append(cF[ii])
             elif ii == 4:
                 if d5_control[-1] == 1:
-                    this_csF = transform(cF[ii], sF[ii], args.alpha)
+                    this_csF = transform(cF[ii], sF[ii], cS, sS, label_set, label_indicator, args.alpha)
                     csF.append(this_csF)
                 else:
                     csF.append(cF[ii])
@@ -159,23 +243,23 @@ if __name__ == '__main__':
         csF[0] = net_d0(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d0(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         if d1_control[0] == 1:
-            csF[0] = transform(csF[0], sF[0], args.alpha)
+            csF[0] = transform(csF[0], sF[0], cS, sS, label_set, label_indicator, args.alpha)
         csF[0] = net_d1(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d1(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         if d2_control[0] == 1:
-            csF[0] = transform(csF[0], sF[0], args.alpha)
+            csF[0] = transform(csF[0], sF[0], cS, sS, label_set, label_indicator, args.alpha)
         csF[0] = net_d2(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d2(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         if d3_control[0] == 1:
-            csF[0] = transform(csF[0], sF[0], args.alpha)
+            csF[0] = transform(csF[0], sF[0], cS, sS, label_set, label_indicator, args.alpha)
         csF[0] = net_d3(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d3(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         if d4_control[0] == 1:
-            csF[0] = transform(csF[0], sF[0], args.alpha)
+            csF[0] = transform(csF[0], sF[0], cS, sS, label_set, label_indicator, args.alpha)
         csF[0] = net_d4(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d4(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         if d5_control[0] == 1:
-            csF[0] = transform(csF[0], sF[0], args.alpha)
+            csF[0] = transform(csF[0], sF[0], cS, sS, label_set, label_indicator, args.alpha)
         csF[0] = net_d5(*csF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         sF[0] = net_d5(*sF, d0_control, d1_control, d2_control, d3_control, d4_control, d5_control)
         out = csF[0].cpu().data.float()

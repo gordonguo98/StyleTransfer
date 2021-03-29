@@ -1,4 +1,7 @@
+import numpy as np
 import torch
+
+from PIL import Image
 
 
 def whiten_and_color(cF, sF):
@@ -41,7 +44,46 @@ def whiten_and_color(cF, sF):
     return targetFeature
 
 
-def transform(cF, sF, alpha):
+def wct_segment(cF, sF, cS, sS, label_set, label_indicator):
+    def resize(feat, target):
+        size = (target.size(2), target.size(1))
+        if len(feat.shape) == 2:
+            return np.asarray(Image.fromarray(feat).resize(size, Image.NEAREST))
+        else:
+            return np.asarray(Image.fromarray(feat, mode='RGB').resize(size, Image.NEAREST))
+
+    def get_index(feat, label):
+        mask = np.where(feat.reshape(feat.shape[0] * feat.shape[1]) == label)
+        if mask[0].size <= 0:
+            return None
+        return torch.LongTensor(mask[0]).cuda()
+
+    resized_content_segment = resize(cS, cF)
+    resized_style_segment = resize(sS, sF)
+
+    target_feature = cF.clone()
+    for label in label_set:
+        if not label_indicator[label]:
+            continue
+        content_index = get_index(resized_content_segment, label)
+        style_index = get_index(resized_style_segment, label)
+        if content_index is None or style_index is None:
+            continue
+        masked_content_feat = torch.index_select(cF, 1, content_index)
+        masked_style_feat = torch.index_select(sF, 1, style_index)
+        _target_feature = whiten_and_color(masked_content_feat, masked_style_feat)
+        if torch.__version__ >= '0.4.0':
+            # XXX reported bug in the original repository
+            new_target_feature = torch.transpose(target_feature, 1, 0)
+            new_target_feature.index_copy_(0, content_index,
+                                           torch.transpose(_target_feature, 1, 0))
+            target_feature = torch.transpose(new_target_feature, 1, 0)
+        else:
+            target_feature.index_copy_(1, content_index, _target_feature)
+    return target_feature
+
+
+def transform(cF, sF, cS, sS, label_set, label_indicator, alpha):
     cF = cF.double()
     sF = sF.double()
     if len(cF.size()) == 4:
@@ -53,7 +95,7 @@ def transform(cF, sF, alpha):
     cFView = cF.view(C,-1)
     sFView = sF.view(C,-1)
 
-    targetFeature = whiten_and_color(cFView,sFView)
+    targetFeature = wct_segment(cFView, sFView, cS, sS, label_set, label_indicator)
     targetFeature = targetFeature.view_as(cF)
     alpha = int(alpha)
     csF = alpha * targetFeature + (1.0 - alpha) * cF
